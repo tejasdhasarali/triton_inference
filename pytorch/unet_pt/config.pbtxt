@@ -1,0 +1,19 @@
+name: "unet_pt"
+platform: "pytorch_libtorch"
+max_batch_size: 1
+input [
+  {
+    name: "INPUT__0"
+    data_type: TYPE_FP32
+    format: FORMAT_NCHW
+    dims: [3, 256, 256]
+  }
+]
+output [
+  {
+    name: "OUTPUT__0"
+    data_type: TYPE_FP32
+    dims: [ 2, 256, 256]
+    label_filename: "unet_labels.txt"
+  }
+]

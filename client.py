@@ -10,13 +10,25 @@ import numpy as np
 np.set_printoptions(suppress=True)
 import queue
 
+# Tensorflow
+# file_path = "/workspace/images"
+# model_name = "unet_savedmodel"
+# input_name = "input_1"
+# output_name = "softmax"
+# dtype = "FP32"
+# classes = 2
+# model_version = "1"
+# format = "NHWC"
+
+# PyTorch
 file_path = "/workspace/images"
-model_name = "unet_savedmodel"
-input_name = "input_1"
-output_name = "sigmoid"
+model_name = "unet_pt"
+input_name = "INPUT__0"
+output_name = "OUTPUT__0"
 dtype = "FP32"
 classes = 2
 model_version = "1"
+format = "NCHW"
 
 class UserData:
 
@@ -32,6 +44,10 @@ def preprocess(img):
     sample_img = img.convert('RGB')
     resized_img = sample_img.resize((256, 256), Image.BILINEAR)
     resized = np.array(resized_img)
+    # print(resized.shape)
+    if format == "NCHW":
+        resized = resized.transpose((2,0,1))
+    # print(resized.shape)
     resized = resized[np.newaxis, :,:,:]
     npdtype = triton_to_np_dtype(dtype)
     # print(npdtype, resized.shape)
@@ -41,11 +57,14 @@ def preprocess(img):
 def postprocess(results, output_name):
     # print(results)
     output_array = results.as_numpy(output_name)
-    # print(output_array.shape)
+    # print(output_array)
     for results in output_array:
+        if format == "NCHW":
+            results = results.transpose((1,2,0))
+        # print(results)
         results = np.amax(results,axis=-1).astype(int)
-        print(results.shape)
-        print(results)
+        # print(results.shape)
+        # print(results)
         img = Image.fromarray(results, '1')
         img.save(str(output_name)+'.png')
         img.show()
