@@ -22,7 +22,7 @@ import queue
 
 # PyTorch
 file_path = "/workspace/images"
-model_name = "unet_pt"
+model_name = "production_model"
 input_name = "INPUT__0"
 output_name = "OUTPUT__0"
 dtype = "FP32"
@@ -41,35 +41,40 @@ def completion_callback(user_data, result, error):
     user_data._completed_requests.put((result, error))
 
 def preprocess(img):
-    sample_img = img.convert('RGB')
-    resized_img = sample_img.resize((256, 256), Image.BILINEAR)
-    resized = np.array(resized_img)
-    # print(resized.shape)
-    if format == "NCHW":
-        resized = resized.transpose((2,0,1))
-    # print(resized.shape)
-    resized = resized[np.newaxis, :,:,:]
+    print(img.size)
+    img.load()
+    # sample_img = img.convert('RGB')
+    print(img.size)
+    resized_img = img.resize((512, 512), Image.LANCZOS)
+    print(resized_img.size)
     npdtype = triton_to_np_dtype(dtype)
-    # print(npdtype, resized.shape)
-    typed = resized.astype(npdtype)
-    return typed
+    resized = np.asarray(resized_img, dtype = npdtype)
+    print("Numpy shape",resized.shape)
+    if format == "NCHW":
+        resized = np.rollaxis(resized, 2, 0)
+    print(resized.shape)
+    resized = resized[np.newaxis, :,:,:]
+    print(resized.shape)
+    np.save("image_array", resized)
+    return resized
 
 def postprocess(results, output_name):
     # print(results)
     output_array = results.as_numpy(output_name)
-    # print(output_array)
+    print(output_array.shape)
     for results in output_array:
+        print(results.shape)
         if format == "NCHW":
-            results = results.transpose((1,2,0))
+            results = np.rollaxis(results, 0, 3)
+        print(results.shape)        
+        # results = np.reshape(results,results.shape[:-1])
+        results = np.amax(results,axis=-1).astype(np.uint8)
+        print(results.shape)
         # print(results)
-        results = np.amax(results,axis=-1).astype(int)
-        # print(results.shape)
-        # print(results)
-        img = Image.fromarray(results, '1')
+        img = Image.fromarray(results, 'P')
         img.save(str(output_name)+'.png')
         img.show()
             
-
 
 if __name__=="__main__":
 
