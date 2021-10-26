@@ -1,2 +1,2 @@
 # triton_inference
- Simple Triton Inference Server
+ Simple Experiment of Triton Inference Server
